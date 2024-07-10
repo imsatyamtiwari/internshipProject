@@ -10,7 +10,7 @@ app.use(cors());
 
 async function db() {
     try {
-        await mongoose.connect('mongodb+srv://satyam_21:Satyam123@cluster0.uoxag2f.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
+        await mongoose.connect('mongodb://0.0.0.0:27017');
         console.log("database connected");
     } catch (err) {
         console.log("some error occured");
@@ -20,18 +20,29 @@ async function db() {
 db();
 
 
-app.get('/', (req, res) => {
-    res.send('Hello World!')
+app.get('/', async (req, res) => {
+    try{
+        const data = await Item.aggregate([
+            {
+              $lookup: {
+                from: "transactions",       
+                localField: "id",
+                foreignField: "item_id",     
+                as: "transactions"       
+              }
+            },
+            {
+              $unwind: "$transactions"   
+            }
+          ]);
+        res.status(200).json({data});
+    }catch(err){
+        console.log("some error occured ",err);
+        res.status(500).json({msg:"internal server error"});
+    }
 })
 
-app.post('/search', async (req, res) => {
-    const body = req.body;
-    const items = await Item.find({ $or: [{ _id: body.value }, { desc: body.value }] });
-    console.log(items);
-    res.json({
-        msg:"msg sent"
-    })
-})
+
 
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
